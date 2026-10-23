@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>说得对 Shuō Dé Duì</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* Layout: one-screen conversation desk. Left: tutor card, chat, input. Right: notes + saved conversations.
+   Palette: school-bus yellow (student) against denim blue (tutor) on cool paper. */
+:root{
+  --bg:#EEF2F5; --surface:#FFFFFF; --surface2:#E3EAF0; --ink:#14202B; --muted:#4F6070; --line:#C9D4DD;
+  --bus:#F2B01E; --on-bus:#1B1403; --denim:#2B5C8A;
+  --tutor-bg:#DCE9F5; --tutor-ink:#14202B;
+  --bad:#A93B2A; --bad-bg:#F8E4DF; --good:#276B45; --good-bg:#DDF0E4;
+  --av-bg:#F8E2A6;
+  --font-display:'Bricolage Grotesque','Noto Sans SC','PingFang SC','Microsoft YaHei','Trebuchet MS',system-ui,sans-serif;
+  --font-body:'Instrument Sans','Noto Sans SC','PingFang SC','Microsoft YaHei','Segoe UI',system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E161E; --surface:#16222D; --surface2:#1F2E3B; --ink:#E8EEF3; --muted:#9DAEBD; --line:#2B3C4B;
+    --denim:#78AADB; --tutor-bg:#203B56; --tutor-ink:#E8EEF3;
+    --bad:#F2998A; --bad-bg:#3A211D; --good:#82CFA0; --good-bg:#17301F; --av-bg:#3B3216;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E161E; --surface:#16222D; --surface2:#1F2E3B; --ink:#E8EEF3; --muted:#9DAEBD; --line:#2B3C4B;
+  --denim:#78AADB; --tutor-bg:#203B56; --tutor-ink:#E8EEF3;
+  --bad:#F2998A; --bad-bg:#3A211D; --good:#82CFA0; --good-bg:#17301F; --av-bg:#3B3216;
+  color-scheme:dark;
+}
+html{box-sizing:border-box;height:100%;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+[hidden]{display:none!important}
+*,*::before,*::after{box-sizing:inherit}
+body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5;
+  padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--denim);outline-offset:2px}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance}
+p{margin:0}
+
+.app{max-width:1200px;height:100%;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,370px);gap:16px}
+.stage{display:flex;flex-direction:column;gap:12px;min-height:0;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px}
+
+.brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.brand h1{font-size:1.55rem;font-weight:750;letter-spacing:-.01em}
+.brand span{color:var(--muted);font-size:.9rem}
+
+.tutor{display:flex;gap:16px;align-items:center;padding:14px;flex-wrap:wrap}
+.avatar{--skin:#F0C4A0;--skin-sh:#D9A581;--hair:#7A4A24;--shirt:#3F6E9E;--shirt-2:#2F5780;
+  width:148px;max-width:100%;flex:none;border-radius:12px;overflow:hidden;line-height:0;position:relative}
+.avatar[data-p="jake"]{--skin:#E2B18B;--skin-sh:#C98F68;--hair:#2E2118;--shirt:#3C6B58;--shirt-2:#2C5243}
+.avatar svg{width:100%;height:auto;display:block}
+.av-bg{fill:var(--av-bg)}
+.f-skin{fill:var(--skin)} .f-shade{fill:var(--skin-sh)} .f-hair{fill:var(--hair)} .f-shirt{fill:var(--shirt)} .f-shirt2{fill:var(--shirt-2)} .f-ink{fill:#1d1d1d}
+.s-hair{stroke:var(--hair)}
+.avatar[data-p="jake"] .only-emily,.avatar[data-p="emily"] .only-jake{display:none}
+.eye{transform-box:fill-box;transform-origin:center;animation:blink 5.5s infinite}
+.talk{display:none;transform-box:fill-box;transform-origin:center}
+.avatar[data-speaking="true"] .smile{display:none}
+.avatar[data-speaking="true"] .talk{display:block;animation:talk .3s ease-in-out infinite alternate}
+.avatar[data-listening="true"]{animation:pulse 1.4s ease-out infinite}
+@keyframes blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+@keyframes talk{from{transform:scaleY(.25)}to{transform:scaleY(1)}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--bus) 70%,transparent)}100%{box-shadow:0 0 0 16px transparent}}
+@media (prefers-reduced-motion:reduce){
+  .eye,.avatar[data-speaking="true"] .talk,.avatar[data-listening="true"]{animation:none}
+  .avatar[data-speaking="true"] .talk{transform:scaleY(.7)}
+}
+
+.tinfo{flex:1;min-width:230px;display:flex;flex-direction:column;gap:10px}
+.tname{display:flex;flex-direction:column}
+.tname h2{font-size:1.4rem;font-weight:700}
+.tname span{color:var(--muted);font-size:.88rem}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:6px 12px;min-height:36px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--denim);color:#fff}
+.field{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:.88rem}
+.field select{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:5px 8px;min-height:36px;color:var(--ink)}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:.88rem;color:var(--ink);min-height:36px}
+.chk input{width:17px;height:17px;accent-color:var(--denim)}
+.status{font-size:.9rem;color:var(--muted);min-height:1.4em}
+.status.warn{color:var(--bad)}
+
+.chat{flex:1;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:min(88%,560px);padding:10px 12px;border-radius:12px;display:flex;flex-direction:column;gap:6px;min-width:0;overflow-wrap:anywhere}
+.msg.tutor{align-self:flex-start;background:var(--tutor-bg);color:var(--tutor-ink);border-bottom-left-radius:3px;cursor:pointer}
+.msg.tutor.sel{outline:2px solid var(--denim);outline-offset:1px}
+.msg.user{align-self:flex-end;background:var(--bus);color:var(--on-bus);border-bottom-right-radius:3px}
+.mrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.mini{border:1px solid color-mix(in srgb,currentColor 30%,transparent);background:transparent;border-radius:7px;padding:2px 9px;font-size:.8rem;min-height:28px}
+.mini:hover{background:color-mix(in srgb,currentColor 10%,transparent)}
+.pill{font-size:.75rem;padding:1px 8px;border-radius:99px;background:color-mix(in srgb,var(--on-bus) 14%,transparent);letter-spacing:.02em}
+.dots{display:inline-flex;gap:4px;padding:4px 2px}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--denim);animation:dot 1s infinite ease-in-out}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes dot{0%,80%,100%{opacity:.25}40%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.dots i{animation:none;opacity:.6}}
+.err{align-self:stretch;background:var(--bad-bg);color:var(--bad);border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+
+.composer{padding:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mic{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:10px;background:var(--bus);color:var(--on-bus);font-weight:650;padding:0 16px;min-height:46px}
+.mic svg{width:20px;height:20px;fill:currentColor}
+.mic[aria-pressed="true"]{background:var(--denim);color:#fff}
+.mic:disabled,.send:disabled{opacity:.5;cursor:not-allowed}
+.lang{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:0 12px;min-height:46px}
+.composer input[type="text"]{flex:1;min-width:150px;min-height:46px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 12px;color:var(--ink)}
+.send{border:0;border-radius:10px;background:var(--denim);color:#fff;font-weight:650;padding:0 18px;min-height:46px}
+.zh{font-size:1.12rem;line-height:1.6}
+.py{color:color-mix(in srgb,currentColor 65%,transparent);font-size:.88rem}
+.hint{font-size:.82rem;color:var(--muted);padding:0 4px}
+
+.side{display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;border:0;background:transparent;padding:12px 8px;font-family:var(--font-display);font-weight:650;font-size:1rem;border-bottom:3px solid transparent;color:var(--muted)}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--bus)}
+.pane{flex:1;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:14px}
+.sec h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:650;margin-bottom:6px}
+.sec .body{display:flex;flex-direction:column;gap:8px}
+.tr{padding:10px 12px;background:var(--surface2);border-radius:10px}
+.fix{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.tag{align-self:flex-start;font-size:.75rem;font-weight:650;padding:1px 8px;border-radius:99px;background:var(--bad-bg);color:var(--bad)}
+.tag.pron{background:var(--tutor-bg);color:var(--denim)}
+.fixline{display:flex;gap:8px;flex-wrap:wrap;align-items:baseline;overflow-wrap:anywhere}
+.fixline del{color:var(--bad)}
+.fixline ins{text-decoration:none;font-weight:650;color:var(--good)}
+.ipa{font-family:'Noto Sans','Segoe UI',sans-serif;color:var(--muted);font-size:.9rem}
+.ok{background:var(--good-bg);color:var(--good);border-radius:10px;padding:10px 12px}
+.vocab{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+.vocab b{font-family:var(--font-display);font-size:1.02rem}
+.vocab em{color:var(--muted)}
+.empty{color:var(--muted)}
+.newc{border:1px dashed var(--denim);background:transparent;color:var(--denim);border-radius:10px;min-height:42px;font-weight:650}
+.conv{display:flex;gap:8px;align-items:stretch}
+.conv .open{flex:1;min-width:0;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 12px;display:flex;flex-direction:column;gap:2px}
+.conv .open[aria-current="true"]{border-color:var(--denim);background:var(--tutor-bg)}
+.conv .t{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conv .m{font-size:.8rem;color:var(--muted)}
+.conv .del{border:1px solid var(--line);background:transparent;border-radius:10px;padding:0 10px;font-size:.82rem;color:var(--muted)}
+.conv .del.arm{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}
+
+@media (max-width:860px){
+  html,body{height:auto}
+  .app{display:block;height:auto}
+  .stage{gap:12px}
+  .chat{flex:none;min-height:300px;max-height:60vh}
+  .side{margin-top:16px}
+  .pane{max-height:none;overflow:visible}
+  .avatar{width:120px}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <main class="stage">
+    <div class="brand"><h1>说得对</h1><span>Shuō dé duì · Latihan bicara dengan tutor Mandarin</span></div>
+
+    <section class="card tutor" aria-label="Tutor">
+      <div class="avatar" id="avatar" data-p="emily" data-speaking="false" data-listening="false">
+        <svg viewBox="0 0 240 260" role="img" aria-label="Wajah tutor" focusable="false">
+          <rect class="av-bg" x="0" y="0" width="240" height="260"/>
+          <g class="only-emily"><path class="f-hair" d="M58 126C52 62 88 30 122 30C158 30 192 62 184 126C188 168 182 204 172 226L68 226C58 204 54 168 58 126Z"/></g>
+          <path class="f-skin" d="M104 148H136V204H104Z"/>
+          <path class="f-shade" d="M104 170C112 182 128 182 136 170V186C128 196 112 196 104 186Z" opacity=".55"/>
+          <path class="f-shirt" d="M22 262C22 214 66 196 120 196C174 196 218 214 218 262Z"/>
+          <path class="f-shirt2" d="M94 197L120 236L146 197L134 191L120 208L106 191Z"/>
+          <circle class="f-skin" cx="72" cy="116" r="9"/><circle class="f-skin" cx="168" cy="116" r="9"/>
+          <ellipse class="f-skin" cx="120" cy="112" rx="48" ry="56"/>
+          <path class="only-jake f-hair" d="M76 128C82 164 104 176 120 176C136 176 158 164 164 128C154 150 138 162 120 162C102 162 86 150 76 128Z" opacity=".2"/>
+          <path class="only-emily f-hair" d="M69 110C66 64 94 46 124 46C154 46 174 66 171 110C158 84 140 72 116 74C96 76 78 90 69 110Z"/>
+          <path class="only-jake f-hair" d="M70 102C64 58 96 36 126 38C158 40 176 64 168 102C164 84 152 70 124 68C100 68 78 80 70 102Z"/>
+          <path class="s-hair" d="M91 99Q102 92 113 98" fill="none" stroke-width="3.5" stroke-linecap="round"/>
+          <path class="s-hair" d="M127 98Q138 92 149 99" fill="none" stroke-width="3.5" stroke-linecap="round"/>
+          <ellipse class="eye f-ink" cx="102" cy="113" rx="5" ry="6.5"/><ellipse class="eye f-ink" cx="138" cy="113" rx="5" ry="6.5"/>
+          <path d="M120 117C117 128 115 132 121 133" fill="none" stroke="var(--skin-sh)" stroke-width="2.6" stroke-linecap="round"/>
+          <circle cx="88" cy="134" r="8" fill="#E58A7B" opacity=".25"/><circle cx="152" cy="134" r="8" fill="#E58A7B" opacity=".25"/>
+          <path class="smile" d="M103 143Q120 157 137 143" fill="none" stroke="#8A3A33" stroke-width="3.6" stroke-linecap="round"/>
+          <ellipse class="talk" cx="120" cy="147" rx="11" ry="8" fill="#7B2D2B"/>
+          <g class="only-jake" fill="none" stroke="#2a2a2a" stroke-width="3"><circle cx="102" cy="113" r="14"/><circle cx="138" cy="113" r="14"/><path d="M116 113H124"/></g>
+          <g class="only-emily"><circle cx="72" cy="131" r="3.5" fill="#F2B01E"/><circle cx="168" cy="131" r="3.5" fill="#F2B01E"/></g>
+        </svg>
+      </div>
+      <div class="tinfo">
+        <div class="tname"><h2 id="tname">Mei</h2><span id="tcity">Tutor Mandarin (Putonghua), dari Beijing</span></div>
+        <div class="row">
+          <div class="seg" role="group" aria-label="Pilih tutor">
+            <button type="button" id="p-emily" aria-pressed="true">Mei (wanita)</button>
+            <button type="button" id="p-jake" aria-pressed="false">Wei (pria)</button>
+          </div>
+          <label class="field" for="lvl">Level
+            <select id="lvl"><option value="pemula">Pemula (HSK 1-2)</option><option value="menengah">Menengah (HSK 3-4)</option><option value="mahir">Mahir (HSK 5-6)</option></select>
+          </label>
+        </div>
+        <div class="row">
+          <label class="chk" for="spk"><input type="checkbox" id="spk" checked>Suara tutor</label>
+          <label class="chk" for="slow"><input type="checkbox" id="slow">Bicara pelan</label>
+          <label class="chk" for="pyn"><input type="checkbox" id="pyn" checked>Tampilkan pinyin</label>
+        </div>
+        <div class="status" id="status" aria-live="polite">Menghubungkan tutor…</div>
+      </div>
+    </section>
+
+    <section class="card chat" id="chat" aria-label="Percakapan" aria-live="polite"></section>
+
+    <section class="card composer" aria-label="Masukkan pesan">
+      <button type="button" class="mic" id="mic" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a4 4 0 0 0 4-4V6a4 4 0 0 0-8 0v5a4 4 0 0 0 4 4Zm6-4a6 6 0 0 1-12 0H4a8 8 0 0 0 7 7.93V22h2v-3.07A8 8 0 0 0 20 11h-2Z"/></svg>
+        <span id="miclabel">Bicara</span>
+      </button>
+      <button type="button" class="lang" id="lang" title="Bahasa yang kamu ucapkan ke mikrofon">Mic: 中文</button>
+      <input type="text" id="msg" autocomplete="off" placeholder="Ketik pesan, atau tekan Bicara" aria-label="Pesan untuk tutor">
+      <button type="button" class="send" id="send">Kirim</button>
+    </section>
+    <p class="hint">Bicara dalam bahasa Mandarin, tutor menjawab dan mengoreksi nada serta pelafalanmu. Boleh juga bertanya dalam bahasa Indonesia, atau mengetik hanzi dan pinyin. Klik balasan tutor untuk melihat keterangannya.</p>
+  </main>
+
+  <aside class="card side" aria-label="Panel samping">
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tab-notes" aria-selected="true" aria-controls="pane-notes">Keterangan</button>
+      <button type="button" role="tab" id="tab-hist" aria-selected="false" aria-controls="pane-hist">Percakapan</button>
+    </div>
+    <div class="pane" id="pane-notes" role="tabpanel" aria-labelledby="tab-notes"></div>
+    <div class="pane" id="pane-hist" role="tabpanel" aria-labelledby="tab-hist" hidden></div>
+  </aside>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ===== PENGATURAN: isi dengan alamat Worker kamu (lihat README) ===== */
+const API_URL = 'https://mandarin-proxy.solus14u.workers.dev';
+/* ===================================================================== */
+const $ = id => document.getElementById(id);
+function el(tag, cls, txt){ const e = document.createElement(tag); if(cls) e.className = cls; if(txt != null) e.textContent = txt; return e; }
+function clip(v, n){ return String(v == null ? '' : v).slice(0, n || 300); }
+
+const PERSONAS = {
+  emily: {
+    name: 'Mei', city: 'Beijing', gender: 'woman', female: true,
+    hints: ['xiaoxiao','xiaoyi','huihui','yaoyao','hanhan','ting-ting','tingting','google 普通话'],
+    greet: '你好!我是林美,来自北京。我们一起练习中文吧。你今天过得怎么样?',
+    pinyin: 'Nǐ hǎo! Wǒ shì Lín Měi, láizì Běijīng. Wǒmen yìqǐ liànxí Zhōngwén ba. Nǐ jīntiān guò de zěnmeyàng?',
+    notes: {
+      reply_id: 'Halo! Aku Lin Mei, dari Beijing. Ayo kita latihan bahasa Mandarin bersama. Bagaimana harimu?',
+      vocab: [
+        {word: '你今天过得怎么样?', pinyin: 'Nǐ jīntiān guò de zěnmeyàng?', meaning_id: 'Bagaimana harimu hari ini? Sapaan santai yang umum.', example: '我今天过得很好。'},
+        {word: '练习', pinyin: 'liànxí', meaning_id: 'berlatih', example: '我们一起练习吧。'}
+      ],
+      tip_id: 'Dua nada ketiga berurutan, seperti 你好 (nǐ hǎo), membuat nada pertama berubah jadi nada kedua. Jadi dibaca "ní hǎo".'
+    }
+  },
+  jake: {
+    name: 'Wei', city: 'Tianjin', gender: 'man', female: false,
+    hints: ['yunxi','yunyang','yunjian','kangkang','liang'],
+    greet: '嗨,我是陈伟,来自天津。准备好练习中文了吗?先简单介绍一下你自己吧。',
+    pinyin: 'Hāi, wǒ shì Chén Wěi, láizì Tiānjīn. Zhǔnbèi hǎo liànxí Zhōngwén le ma? Xiān jiǎndān jièshào yíxià nǐ zìjǐ ba.',
+    notes: {
+      reply_id: 'Hai, aku Chen Wei, dari Tianjin. Siap latihan bahasa Mandarin? Perkenalkan dirimu sedikit dulu ya.',
+      vocab: [
+        {word: '准备好', pinyin: 'zhǔnbèi hǎo', meaning_id: 'siap, sudah bersiap', example: '你准备好了吗?'},
+        {word: '介绍', pinyin: 'jièshào', meaning_id: 'memperkenalkan', example: '我来介绍一下。'}
+      ],
+      tip_id: 'Partikel 吧 (ba) di akhir kalimat melunakkan ajakan atau permintaan. Ia diucapkan ringan dan pendek, tanpa nada penuh (nada netral).'
+    }
+  }
+};
+const LEVELS = {
+  pemula:   {label: 'Pemula',   desc: 'beginner (HSK 1-2): use only the most common words, very short sentences of at most 10 characters, one idea per sentence'},
+  menengah: {label: 'Menengah', desc: 'intermediate (HSK 3-4): natural everyday Mandarin with common sentence patterns, 1 to 2 clauses per sentence'},
+  mahir:    {label: 'Mahir',    desc: 'advanced (HSK 5-6): natural spoken Mandarin with idioms (chengyu), colloquial particles and varied sentence structure'}
+};
+
+/* ---------- storage (per viewer, in this browser) ---------- */
+const KEY = 'shuodedui.v1';
+let store = {convs: [], prefs: {}};
+try {
+  const raw = localStorage.getItem(KEY);
+  if(raw){ const o = JSON.parse(raw); if(o && Array.isArray(o.convs)) store = {convs: o.convs, prefs: o.prefs || {}}; }
+} catch(e){}
+function saveStore(){ try { localStorage.setItem(KEY, JSON.stringify(store)); } catch(e){} }
+
+/* ---------- state ---------- */
+const S = {
+  persona: 'emily', level: 'pemula', speak: true, slow: false, pinyin: true, micLang: 'zh-CN',
+  conv: null, selected: 0, busy: false, listening: false, speaking: false,
+  sampleState: 'pending', error: null, note: '', tab: 'notes', armed: null
+};
+if(store.prefs){
+  if(PERSONAS[store.prefs.persona]) S.persona = store.prefs.persona;
+  if(LEVELS[store.prefs.level]) S.level = store.prefs.level;
+  if(typeof store.prefs.speak === 'boolean') S.speak = store.prefs.speak;
+  if(typeof store.prefs.slow === 'boolean') S.slow = store.prefs.slow;
+  if(store.prefs.micLang === 'id-ID' || store.prefs.micLang === 'zh-CN') S.micLang = store.prefs.micLang;
+  if(typeof store.prefs.pinyin === 'boolean') S.pinyin = store.prefs.pinyin;
+}
+function savePrefs(){ store.prefs = {persona: S.persona, level: S.level, speak: S.speak, slow: S.slow, pinyin: S.pinyin, micLang: S.micLang}; saveStore(); }
+const P = () => PERSONAS[S.persona];
+
+function greetingMsg(p){
+  const g = PERSONAS[p];
+  return {role: 'tutor', text: g.greet, pinyin: g.pinyin, notes: {reply_id: g.notes.reply_id, fixes: [], vocab: g.notes.vocab, tip_id: g.notes.tip_id, explain_id: ''}};
+}
+function newConv(){
+  S.conv = {id: 'c' + Date.now().toString(36), ts: Date.now(), persona: S.persona, level: S.level, msgs: [greetingMsg(S.persona)]};
+  S.selected = 0; S.error = null; S.note = '';
+}
+function hasUserMsg(c){ return c.msgs.some(m => m.role === 'user'); }
+function persist(){
+  if(!hasUserMsg(S.conv)) return;
+  S.conv.ts = Date.now();
+  const copy = JSON.parse(JSON.stringify(S.conv));
+  const i = store.convs.findIndex(c => c.id === copy.id);
+  if(i >= 0) store.convs[i] = copy; else store.convs.unshift(copy);
+  store.convs.sort((a, b) => b.ts - a.ts);
+  store.convs = store.convs.slice(0, 30);
+  saveStore();
+}
+
+/* ---------- speech out ---------- */
+let voices = [];
+function loadVoices(){ try { voices = window.speechSynthesis.getVoices() || []; } catch(e){ voices = []; } }
+if('speechSynthesis' in window){
+  loadVoices();
+  try { window.speechSynthesis.addEventListener('voiceschanged', loadVoices); } catch(e){}
+}
+function pickVoice(){
+  const us = voices.filter(v => /^(zh|cmn)[-_](CN|Hans)/i.test(v.lang));
+  const pool = us.length ? us : voices.filter(v => /^(zh|cmn)/i.test(v.lang));
+  for(const h of P().hints){
+    const v = pool.find(x => x.name.toLowerCase().indexOf(h) >= 0);
+    if(v) return {v: v, exact: true};
+  }
+  return {v: pool[0] || null, exact: false};
+}
+function setSpeaking(on){ S.speaking = on; $('avatar').dataset.speaking = on ? 'true' : 'false'; renderStatus(); }
+function stopSpeaking(){ try { if('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch(e){} setSpeaking(false); }
+function speak(text){
+  if(!('speechSynthesis' in window)){ setNote('Browser ini tidak mendukung suara tutor. Balasan tetap bisa dibaca di layar.'); return; }
+  try {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    const pv = pickVoice();
+    if(pv.v){ u.voice = pv.v; u.lang = pv.v.lang; } else { u.lang = 'zh-CN'; if(voices.length) setNote('Perangkat ini belum punya suara Mandarin. Pasang paket suara Mandarin di pengaturan sistem, atau pakai Chrome atau Edge.'); }
+    u.rate = S.slow ? 0.6 : (S.level === 'pemula' ? 0.8 : 0.95);
+    u.pitch = pv.exact ? 1 : (P().female ? 1.12 : 0.82);
+    u.onstart = () => setSpeaking(true);
+    u.onend = () => setSpeaking(false);
+    u.onerror = () => setSpeaking(false);
+    window.speechSynthesis.speak(u);
+  } catch(e){ setSpeaking(false); }
+}
+
+/* ---------- speech in ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, finalText = '', finalConf = null;
+function setNote(t){ S.note = t || ''; renderStatus(); }
+function micErrorText(code){
+  if(code === 'not-allowed' || code === 'service-not-allowed') return 'Mikrofon tidak bisa dipakai di halaman ini. Izinkan mikrofon di browser, atau ketik pesanmu di kolom bawah.';
+  if(code === 'no-speech') return 'Tidak ada suara terdengar. Tekan Bicara dan coba lagi.';
+  if(code === 'audio-capture') return 'Mikrofon tidak ditemukan. Cek perangkatmu atau ketik pesan.';
+  if(code === 'network') return 'Pengenalan suara butuh koneksi internet.';
+  return 'Pengenalan suara gagal. Coba lagi atau ketik pesanmu.';
+}
+function startListening(){
+  if(!SR){ setNote('Browser ini belum mendukung pengenalan suara. Pakai Chrome atau Edge, atau ketik pesanmu.'); return; }
+  if(S.busy || S.listening) return;
+  stopSpeaking(); setNote('');
+  let r;
+  try { r = new SR(); } catch(e){ setNote(micErrorText('x')); return; }
+  rec = r; finalText = ''; finalConf = null;
+  let failed = false;
+  r.lang = S.micLang; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
+  r.onstart = () => { S.listening = true; renderControls(); renderStatus(); };
+  r.onresult = ev => {
+    let interim = '', fin = '', conf = null;
+    for(let i = ev.resultIndex; i < ev.results.length; i++){
+      const res = ev.results[i];
+      if(res.isFinal){ fin += res[0].transcript; conf = res[0].confidence; } else { interim += res[0].transcript; }
+    }
+    if(fin){ finalText += (finalText ? ' ' : '') + fin.trim(); finalConf = conf; }
+    $('msg').value = (finalText + ' ' + interim).trim();
+  };
+  r.onerror = ev => {
+    if(ev.error === 'aborted') return;
+    failed = true; S.listening = false; rec = null;
+    setNote(micErrorText(ev.error)); renderControls();
+  };
+  r.onend = () => {
+    S.listening = false; rec = null;
+    const t = finalText.trim();
+    renderControls(); renderStatus();
+    if(failed) return;
+    if(t) send(t, {voice: true, conf: finalConf});
+    else setNote('Tidak ada suara terdengar. Tekan Bicara dan coba lagi.');
+  };
+  try { r.start(); } catch(e){ rec = null; S.listening = false; setNote(micErrorText('x')); renderControls(); }
+}
+function stopListening(){ if(rec){ try { rec.stop(); } catch(e){} } }
+
+/* ---------- asking the tutor ---------- */
+function buildPrompt(um){
+  const idx = S.conv.msgs.indexOf(um);
+  const hist = S.conv.msgs.slice(Math.max(0, idx - 10), idx)
+    .map(m => (m.role === 'tutor' ? 'Tutor' : 'Student') + ': ' + m.text).join('\n');
+  const p = P();
+  let via;
+  if(um.via === 'voice'){
+    via = um.lang === 'id-ID'
+      ? 'spoken in Indonesian (speech-recognizer transcript, so pronunciation cannot be judged)'
+      : 'spoken aloud in Mandarin; this is a speech-recognizer transcript in characters' + (um.conf != null && um.conf > 0 ? ' with overall confidence ' + Math.round(um.conf * 100) + '%' : '');
+  } else { via = 'typed (no audio, so there is nothing to judge about pronunciation or tones)'; }
+  return [
+    'You are ' + p.name + ', a warm, patient native Mandarin tutor (a ' + p.gender + ' from ' + p.city + '). Your student is an Indonesian speaker practicing conversation with you. Speak standard Mandarin (Putonghua) and write in Simplified Chinese characters.',
+    'Student level: ' + LEVELS[S.level].desc + '.',
+    '',
+    'How to answer the student\'s latest message:',
+    '1. "reply": answer naturally in Mandarin, 1 to 3 short sentences at the student\'s level, and end with one easy follow-up question. If the student wrote or spoke Indonesian, say in Mandarin what they meant, invite them to repeat it in Mandarin, then continue.',
+    '2. "reply_pinyin": the full pinyin of your reply with tone marks (for example "nǐ hǎo"), words separated by spaces, matching "reply" exactly.',
+    '3. "fixes": correct mistakes in the latest student message, at most 3, most important first. Use type "grammar" for grammar, word choice or measure words, and "pronunciation" for sounds and tones. For spoken messages the text is what a recognizer heard: characters that do not fit the context but sound like the intended words are strong evidence of a mispronounced tone or initial (for example 买 mǎi heard as 卖 mài, 四 sì as 十 shí, or z/c/s confused with zh/ch/sh, or q/x/j). Name the tone or sound the student likely got wrong. For typed messages, return no pronunciation fixes unless the student asks how to pronounce something.',
+    '4. Each fix has "said" (what the student said), "better" (the correct version in characters), "pinyin" (pinyin of the corrected key word or phrase with tone marks, for pronunciation and grammar fixes alike), and "why_id" (one short explanation in Indonesian). If there is nothing to fix, return an empty array and make your reply praise something specific.',
+    '5. "reply_id": a natural Indonesian translation of your reply.',
+    '6. "vocab": 0 to 2 useful words or phrases from your reply, each {"word" in characters,"pinyin","meaning_id","example" in characters}.',
+    '7. "tip_id": one short practical tip in Indonesian about tones, pronunciation or usage related to this turn, or an empty string.',
+    '8. "explain_id": only if the student asked you to explain something in Indonesian, give the explanation in Indonesian here. Otherwise an empty string.',
+    '',
+    'Reply with only this JSON object:',
+    '{"reply":"","reply_pinyin":"","reply_id":"","fixes":[{"type":"grammar","said":"","better":"","pinyin":"","why_id":""}],"vocab":[{"word":"","pinyin":"","meaning_id":"","example":""}],"tip_id":"","explain_id":""}',
+    '',
+    'Conversation so far:',
+    hist || '(this is the first student message)',
+    '',
+    'Student\'s latest message, ' + via + ':',
+    '"' + um.text.replace(/"/g, "'") + '"'
+  ].join('\n');
+}
+function normalizeNotes(d){
+  const fixes = (Array.isArray(d.fixes) ? d.fixes : []).slice(0, 3).map(f => ({
+    type: f && f.type === 'pronunciation' ? 'pronunciation' : 'grammar',
+    said: clip(f && f.said, 200), better: clip(f && f.better, 200), why_id: clip(f && f.why_id, 400), pinyin: clip(f && f.pinyin, 120)
+  })).filter(f => f.said || f.better);
+  const vocab = (Array.isArray(d.vocab) ? d.vocab : []).slice(0, 2).map(v => ({
+    word: clip(v && v.word, 120), pinyin: clip(v && v.pinyin, 160), meaning_id: clip(v && v.meaning_id, 300), example: clip(v && v.example, 200)
+  })).filter(v => v.word);
+  return {reply_id: clip(d.reply_id, 800), fixes: fixes, vocab: vocab, tip_id: clip(d.tip_id, 400), explain_id: clip(d.explain_id, 1200)};
+}
+function errorText(e){
+  const c = e && e.code;
+  if(c === 'rate_limited') return 'Jatah gratis harian tutor sudah habis, atau terlalu banyak permintaan. Coba lagi nanti. Jatah gratis diperbarui setiap pukul 07.00 WIB.';
+  if(c === 'origin_not_allowed') return 'Alamat situs ini belum diizinkan di server tutor. Tambahkan ke ALLOWED_ORIGINS (lihat README).';
+  if(c === 'not_configured') return 'Server tutor belum dihubungkan ke Workers AI. Lihat README bagian Binding AI.';
+  if(c === 'invalid_json' || c === 'empty') return 'Jawaban tutor tidak terbaca. Kirim ulang pesanmu.' + (e.detail ? ' (' + e.detail + ')' : '');
+  if(c === 'bad_request') return 'Pesan tidak bisa diproses. Coba kalimat yang lebih pendek.';
+  if(c === 'upstream_error' && e.detail) return 'Server AI menolak permintaan (kode ' + (e.status || '?') + '): ' + e.detail;
+  return 'Koneksi ke tutor terputus. Coba kirim lagi.';
+}
+async function ask(um){
+  try {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 30000);
+    let res, j = null;
+    try {
+      res = await fetch(API_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({prompt: buildPrompt(um)}),
+        signal: ctl.signal
+      });
+      try { j = await res.json(); } catch(e2){ j = null; }
+    } finally { clearTimeout(timer); }
+    if(!res.ok) throw {code: (j && j.error) || 'upstream_error', status: j && j.status, detail: j && j.detail};
+    const data = j && j.data;
+    if(!data || typeof data !== 'object' || !String(data.reply || '').trim()) throw {code: 'invalid_json'};
+    const reply = String(data.reply).trim().slice(0, 900);
+    const notes = normalizeNotes(data);
+    S.conv.msgs.push({role: 'tutor', text: reply, pinyin: clip(data.reply_pinyin, 1200), notes: notes});
+    um.fixCount = notes.fixes.length;
+    um.noteRef = S.conv.msgs.length - 1;
+    S.selected = um.noteRef;
+    S.busy = false; S.error = null;
+    persist(); renderAll(true);
+    if(S.speak) speak(reply);
+  } catch(e){
+    S.busy = false; S.error = {text: errorText(e), um: um};
+    renderAll(true);
+  }
+}
+function send(text, opts){
+  opts = opts || {};
+  text = String(text || '').trim();
+  if(!text || S.busy || S.sampleState === 'none') return;
+  stopSpeaking(); stopListening(); S.note = '';
+  const um = {role: 'user', text: text.slice(0, 500), via: opts.voice ? 'voice' : 'typed', conf: opts.conf == null ? null : opts.conf, lang: opts.voice ? S.micLang : null};
+  S.conv.msgs.push(um); S.busy = true; S.error = null;
+  $('msg').value = '';
+  persist(); renderAll(true);
+  ask(um);
+}
+
+/* ---------- rendering ---------- */
+function renderAvatar(){
+  const p = P();
+  $('avatar').dataset.p = S.persona;
+  $('tname').textContent = p.name;
+  $('tcity').textContent = 'Tutor Mandarin (Putonghua), dari ' + p.city;
+  $('p-emily').setAttribute('aria-pressed', S.persona === 'emily' ? 'true' : 'false');
+  $('p-jake').setAttribute('aria-pressed', S.persona === 'jake' ? 'true' : 'false');
+  $('avatar').dataset.listening = S.listening ? 'true' : 'false';
+}
+function renderStatus(){
+  const st = $('status');
+  let t, warn = false;
+  if(S.note){ t = S.note; warn = true; }
+  else if(S.listening){ t = 'Mendengarkan… bicaralah dalam ' + (S.micLang === 'zh-CN' ? 'bahasa Mandarin' : 'bahasa Indonesia') + '.'; }
+  else if(S.busy){ t = P().name + ' sedang menulis balasan…'; }
+  else if(S.sampleState === 'pending'){ t = 'Menghubungkan tutor…'; }
+  else if(S.sampleState === 'none'){ t = 'Alamat server tutor belum diisi. Ubah API_URL di index.html (lihat README).'; warn = true; }
+  else if(S.speaking){ t = P().name + ' sedang berbicara…'; }
+  else { t = 'Siap. Tekan Bicara atau ketik pesanmu.'; }
+  st.textContent = t;
+  st.className = 'status' + (warn ? ' warn' : '');
+}
+function renderControls(){
+  const mic = $('mic');
+  mic.setAttribute('aria-pressed', S.listening ? 'true' : 'false');
+  $('miclabel').textContent = S.listening ? 'Berhenti' : 'Bicara';
+  mic.disabled = !SR || S.busy || S.sampleState === 'none';
+  mic.title = SR ? '' : 'Browser ini belum mendukung pengenalan suara. Pakai Chrome atau Edge.';
+  $('send').disabled = S.busy || S.sampleState === 'none';
+  $('lang').textContent = 'Mic: ' + (S.micLang === 'zh-CN' ? '中文' : 'Indonesia');
+  $('lvl').value = S.level;
+  $('spk').checked = S.speak;
+  $('slow').checked = S.slow;
+  $('pyn').checked = S.pinyin;
+  $('avatar').dataset.listening = S.listening ? 'true' : 'false';
+}
+function selectMsg(i){ S.selected = i; S.tab = 'notes'; renderChat(false); renderNotes(); renderTabs(); }
+function renderChat(stick){
+  const chat = $('chat');
+  const prev = chat.scrollTop;
+  chat.textContent = '';
+  S.conv.msgs.forEach((m, i) => {
+    if(m.role === 'tutor'){
+      const d = el('div', 'msg tutor' + (i === S.selected ? ' sel' : ''));
+      d.appendChild(el('p', 'zh', m.text));
+      if(S.pinyin && m.pinyin) d.appendChild(el('p', 'py', m.pinyin));
+      const row = el('div', 'mrow');
+      const b1 = el('button', 'mini', 'Dengarkan'); b1.type = 'button';
+      b1.onclick = ev => { ev.stopPropagation(); speak(m.text); };
+      const b2 = el('button', 'mini', 'Keterangan'); b2.type = 'button';
+      b2.onclick = ev => { ev.stopPropagation(); selectMsg(i); };
+      row.appendChild(b1); row.appendChild(b2); d.appendChild(row);
+      d.onclick = () => selectMsg(i);
+      chat.appendChild(d);
+    } else {
+      const d = el('div', 'msg user');
+      d.appendChild(el('p', 'zh', m.text));
+      if(m.via === 'voice' || m.fixCount){
+        const row = el('div', 'mrow');
+        if(m.via === 'voice') row.appendChild(el('span', 'pill', 'Suara'));
+        if(m.fixCount){
+          const b = el('button', 'mini', m.fixCount + ' koreksi'); b.type = 'button';
+          b.onclick = () => selectMsg(m.noteRef);
+          row.appendChild(b);
+        }
+        d.appendChild(row);
+      }
+      chat.appendChild(d);
+    }
+  });
+  if(S.busy){
+    const d = el('div', 'msg tutor'); d.style.cursor = 'default';
+    const dots = el('span', 'dots'); dots.setAttribute('aria-label', P().name + ' sedang mengetik');
+    dots.appendChild(el('i')); dots.appendChild(el('i')); dots.appendChild(el('i'));
+    d.appendChild(dots); chat.appendChild(d);
+  }
+  if(S.error){
+    const e = el('div', 'err'); e.setAttribute('role', 'alert');
+    e.appendChild(el('span', null, S.error.text));
+    const b = el('button', 'mini', 'Kirim ulang'); b.type = 'button';
+    b.onclick = () => { const um = S.error.um; S.error = null; S.busy = true; renderAll(true); ask(um); };
+    e.appendChild(b); chat.appendChild(e);
+  }
+  chat.scrollTop = stick ? chat.scrollHeight : prev;
+}
+function section(title){
+  const s = el('div', 'sec'); s.appendChild(el('h3', null, title));
+  const b = el('div', 'body'); s.appendChild(b);
+  return {wrap: s, body: b};
+}
+function renderNotes(){
+  const pane = $('pane-notes');
+  pane.textContent = '';
+  let m = S.conv.msgs[S.selected];
+  if(!m || m.role !== 'tutor'){ m = null; for(let i = S.conv.msgs.length - 1; i >= 0; i--){ if(S.conv.msgs[i].role === 'tutor'){ m = S.conv.msgs[i]; break; } } }
+  if(!m){ pane.appendChild(el('p', 'empty', 'Keterangan balasan tutor akan muncul di sini.')); return; }
+  const n = m.notes || {fixes: [], vocab: []};
+  const idx = S.conv.msgs.indexOf(m);
+  const prevUser = idx > 0 && S.conv.msgs[idx - 1].role === 'user' ? S.conv.msgs[idx - 1] : null;
+
+  if(n.reply_id){
+    const s = section('Terjemahan');
+    s.body.appendChild(el('p', 'tr', n.reply_id));
+    pane.appendChild(s.wrap);
+  }
+  if(n.explain_id){
+    const s = section('Penjelasan');
+    s.body.appendChild(el('p', 'tr', n.explain_id));
+    pane.appendChild(s.wrap);
+  }
+  if(prevUser){
+    const s = section('Koreksi untuk kalimatmu');
+    s.body.appendChild(el('p', 'empty', '"' + prevUser.text + '"'));
+    if(n.fixes.length){
+      n.fixes.forEach(f => {
+        const c = el('div', 'fix');
+        c.appendChild(el('span', 'tag' + (f.type === 'pronunciation' ? ' pron' : ''), f.type === 'pronunciation' ? 'Pelafalan / nada' : 'Tata bahasa'));
+        const line = el('div', 'fixline');
+        if(f.said) line.appendChild(el('del', null, f.said));
+        if(f.said && f.better) line.appendChild(el('span', null, '→'));
+        if(f.better) line.appendChild(el('ins', null, f.better));
+        if(f.pinyin) line.appendChild(el('span', 'ipa', f.pinyin));
+        c.appendChild(line);
+        if(f.why_id) c.appendChild(el('p', null, f.why_id));
+        if(f.better){
+          const b = el('button', 'mini', 'Dengarkan versi benar'); b.type = 'button'; b.style.alignSelf = 'flex-start';
+          b.onclick = () => speak(f.better);
+          c.appendChild(b);
+        }
+        s.body.appendChild(c);
+      });
+    } else {
+      s.body.appendChild(el('p', 'ok', 'Tidak ada yang perlu dikoreksi. Kalimatmu sudah bagus.'));
+    }
+    pane.appendChild(s.wrap);
+  }
+  if(n.vocab.length){
+    const s = section('Kosakata');
+    n.vocab.forEach(v => {
+      const c = el('div', 'vocab');
+      c.appendChild(el('b', null, v.word));
+      if(v.pinyin) c.appendChild(el('span', 'ipa', v.pinyin));
+      if(v.meaning_id) c.appendChild(el('span', null, v.meaning_id));
+      if(v.example) c.appendChild(el('em', null, 'Contoh: ' + v.example));
+      const b = el('button', 'mini', 'Dengarkan'); b.type = 'button'; b.style.alignSelf = 'flex-start'; b.style.marginTop = '4px';
+      b.onclick = () => speak(v.example || v.word);
+      c.appendChild(b);
+      s.body.appendChild(c);
+    });
+    pane.appendChild(s.wrap);
+  }
+  if(n.tip_id){
+    const s = section('Tips');
+    s.body.appendChild(el('p', 'tr', n.tip_id));
+    pane.appendChild(s.wrap);
+  }
+}
+function fmtDate(ts){
+  try { return new Date(ts).toLocaleString('id-ID', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'}); } catch(e){ return ''; }
+}
+function openConv(c){
+  persist();
+  stopSpeaking(); stopListening();
+  S.conv = JSON.parse(JSON.stringify(c));
+  if(PERSONAS[c.persona]) S.persona = c.persona;
+  if(LEVELS[c.level]) S.level = c.level;
+  S.busy = false; S.error = null; S.note = '';
+  let sel = 0; for(let i = S.conv.msgs.length - 1; i >= 0; i--){ if(S.conv.msgs[i].role === 'tutor'){ sel = i; break; } }
+  S.selected = sel; S.tab = 'notes';
+  savePrefs(); renderAll(true);
+}
+function renderHistory(){
+  const pane = $('pane-hist');
+  pane.textContent = '';
+  const nb = el('button', 'newc', 'Percakapan baru'); nb.type = 'button';
+  nb.onclick = () => { persist(); stopSpeaking(); stopListening(); newConv(); S.tab = 'notes'; renderAll(true); };
+  pane.appendChild(nb);
+  if(!store.convs.length){
+    pane.appendChild(el('p', 'empty', 'Percakapanmu akan tersimpan di sini setelah kamu mengirim pesan pertama. Tersimpan di browser ini saja.'));
+    return;
+  }
+  store.convs.forEach(c => {
+    const row = el('div', 'conv');
+    const o = el('button', 'open'); o.type = 'button';
+    if(S.conv && c.id === S.conv.id) o.setAttribute('aria-current', 'true');
+    const first = c.msgs.find(m => m.role === 'user');
+    o.appendChild(el('span', 't', first ? first.text : 'Percakapan baru'));
+    const pn = PERSONAS[c.persona] ? PERSONAS[c.persona].name : 'Tutor';
+    o.appendChild(el('span', 'm', pn + ' · ' + (LEVELS[c.level] ? LEVELS[c.level].label : '') + ' · ' + c.msgs.length + ' pesan · ' + fmtDate(c.ts)));
+    o.onclick = () => openConv(c);
+    const d = el('button', 'del' + (S.armed === c.id ? ' arm' : ''), S.armed === c.id ? 'Yakin?' : 'Hapus'); d.type = 'button';
+    d.onclick = () => {
+      if(S.armed === c.id){
+        store.convs = store.convs.filter(x => x.id !== c.id); saveStore(); S.armed = null;
+        if(S.conv && S.conv.id === c.id){ newConv(); renderAll(true); } else renderHistory();
+      } else { S.armed = c.id; renderHistory(); }
+    };
+    row.appendChild(o); row.appendChild(d); pane.appendChild(row);
+  });
+}
+function renderTabs(){
+  const notes = S.tab === 'notes';
+  $('tab-notes').setAttribute('aria-selected', notes ? 'true' : 'false');
+  $('tab-hist').setAttribute('aria-selected', notes ? 'false' : 'true');
+  $('pane-notes').hidden = !notes;
+  $('pane-hist').hidden = notes;
+}
+function renderAll(stick){
+  renderAvatar(); renderControls(); renderStatus(); renderChat(stick); renderNotes(); renderHistory(); renderTabs();
+}
+
+/* ---------- events ---------- */
+function switchPersona(p){
+  if(S.persona === p) return;
+  persist(); stopSpeaking(); stopListening();
+  S.persona = p; newConv(); savePrefs(); renderAll(true);
+}
+$('p-emily').onclick = () => switchPersona('emily');
+$('p-jake').onclick = () => switchPersona('jake');
+$('lvl').onchange = e => { S.level = e.target.value; if(S.conv) S.conv.level = S.level; savePrefs(); renderControls(); };
+$('spk').onchange = e => { S.speak = e.target.checked; if(!S.speak) stopSpeaking(); savePrefs(); };
+$('slow').onchange = e => { S.slow = e.target.checked; savePrefs(); };
+$('pyn').onchange = e => { S.pinyin = e.target.checked; savePrefs(); renderChat(false); };
+$('lang').onclick = () => { S.micLang = S.micLang === 'zh-CN' ? 'id-ID' : 'zh-CN'; savePrefs(); renderControls(); };
+$('mic').onclick = () => { if(S.listening) stopListening(); else startListening(); };
+$('send').onclick = () => send($('msg').value, {voice: false});
+$('msg').onkeydown = e => { if(e.key === 'Enter' && !e.isComposing){ e.preventDefault(); send($('msg').value, {voice: false}); } };
+$('tab-notes').onclick = () => { S.tab = 'notes'; renderTabs(); };
+$('tab-hist').onclick = () => { S.armed = null; S.tab = 'hist'; renderHistory(); renderTabs(); };
+
+/* ---------- boot ---------- */
+newConv();
+renderAll(true);
+S.sampleState = (!API_URL || API_URL.indexOf('GANTI-INI') >= 0) ? 'none' : 'ready';
+renderControls(); renderStatus();
+})();
+</script>
+</body>
+</html>
